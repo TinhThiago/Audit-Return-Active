@@ -1,0 +1,45 @@
+{
+  "name": "RetrieveAuditDetails",
+  "title": "RetrieveAuditDetails",
+  "type": "Microsoft.PowerApps/dataverseOperation",
+  "properties": {
+    "displayName": "RetrieveAuditDetails",
+    "swagger": {
+      "swagger": "2.0",
+      "info": {
+        "title": "RetrieveAuditDetails",
+        "version": "1.0"
+      },
+      "basePath": "/api/data/v9.2",
+      "paths": {
+        "/audits({id})/Microsoft.Dynamics.CRM.RetrieveAuditDetails": {
+          "get": {
+            "operationId": "RetrieveAuditDetails",
+            "parameters": [
+              {
+                "name": "id",
+                "in": "path",
+                "required": true,
+                "type": "string",
+                "format": "guid",
+                "x-ms-dataverse-type": "UniqueidentifierType",
+                "x-ms-csdl-type": "Edm.Guid"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Success",
+                "schema": {
+                  "type": "object",
+                  "x-ms-dataverse-type": "LookupType",
+                  "x-ms-csdl-type": "mscrm.RetrieveAuditDetailsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "entitySetName": "audits"
+}

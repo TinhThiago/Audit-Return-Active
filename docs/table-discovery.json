@@ -1,0 +1,5 @@
+{
+  "success": false,
+  "exitCode": 1,
+  "errorMessage": "Failed to get tables for connection 'd6b13be625214d45a87dc2e4378d9225' and connector 'shared_commondataserviceforapps': {}"
+}

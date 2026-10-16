@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "appId": null,
+  "appDisplayName": "Audit- Return Active",
+  "region": "prod",
+  "appType": "CodeApp",
+  "environmentId": "bdded998-c7e6-e6a3-b58a-58112acc2c9a",
+  "description": " ",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:5173",
+  "logoPath": "Default",
+  "connectionReferences": {
+    "bc469e84-7a1f-4f29-852f-991e3cdce2be": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_webcontents",
+      "displayName": "HTTP with Microsoft Entra ID (preauthorized)",
+      "dataSources": [
+        "webcontents"
+      ],
+      "authenticationType": "EntraAuth",
+      "sharedConnectionId": "/providers/Microsoft.PowerApps/apis/shared_webcontents/connections/shared-webcontents-76f4c5fe-ae3a-466a-a788-23554b5be35e",
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {
+    "default.cds": {
+      "dataSources": {
+        "environment_39a902ba": {
+          "entitySetName": "Environment",
+          "logicalName": "environment_39a902ba",
+          "isHidden": false
+        },
+        "auditing": {
+          "entitySetName": "audits",
+          "logicalName": "audit",
+          "isHidden": false
+        },
+        "s_nph_ms": {
+          "entitySetName": "ph_item_masters",
+          "logicalName": "ph_item_master",
+          "isHidden": false
+        }
+      },
+      "environmentVariableName": ""
+    }
+  }
+}

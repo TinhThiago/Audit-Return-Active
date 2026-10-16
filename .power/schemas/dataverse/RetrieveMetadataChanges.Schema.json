@@ -1,0 +1,76 @@
+{
+  "name": "RetrieveMetadataChanges",
+  "title": "RetrieveMetadataChanges",
+  "type": "Microsoft.PowerApps/dataverseOperation",
+  "properties": {
+    "displayName": "RetrieveMetadataChanges",
+    "swagger": {
+      "swagger": "2.0",
+      "info": {
+        "title": "RetrieveMetadataChanges",
+        "version": "1.0"
+      },
+      "basePath": "/api/data/v9.2",
+      "paths": {
+        "/RetrieveMetadataChanges": {
+          "get": {
+            "operationId": "RetrieveMetadataChanges",
+            "parameters": [
+              {
+                "name": "Query",
+                "in": "query",
+                "required": false,
+                "type": "object",
+                "x-ms-dataverse-type": "LookupType",
+                "x-ms-csdl-type": "mscrm.EntityQueryExpression"
+              },
+              {
+                "name": "DeletedMetadataFilters",
+                "in": "query",
+                "required": false,
+                "type": "object",
+                "x-ms-dataverse-type": "LookupType",
+                "x-ms-csdl-type": "mscrm.DeletedMetadataFilters"
+              },
+              {
+                "name": "ClientVersionStamp",
+                "in": "query",
+                "required": false,
+                "type": "string",
+                "x-ms-dataverse-type": "StringType",
+                "x-ms-csdl-type": "Edm.String"
+              },
+              {
+                "name": "AppModuleId",
+                "in": "query",
+                "required": false,
+                "type": "string",
+                "format": "guid",
+                "x-ms-dataverse-type": "UniqueidentifierType",
+                "x-ms-csdl-type": "Edm.Guid"
+              },
+              {
+                "name": "RetrieveAllSettings",
+                "in": "query",
+                "required": false,
+                "type": "boolean",
+                "x-ms-dataverse-type": "BooleanType",
+                "x-ms-csdl-type": "Edm.Boolean"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Success",
+                "schema": {
+                  "type": "object",
+                  "x-ms-dataverse-type": "LookupType",
+                  "x-ms-csdl-type": "mscrm.RetrieveMetadataChangesResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
