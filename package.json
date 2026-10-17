@@ -10,13 +10,16 @@
     "test": "vitest run",
     "format": "prettier --write src tests vite.config.ts package.json tsconfig.json",
     "format:check": "prettier --check src tests vite.config.ts package.json tsconfig.json",
-    "local": "pa app run --non-interactive"
+    "local": "pa app run --non-interactive",
+    "build:pages": "node scripts/browser.mjs build",
+    "dev:browser": "node scripts/browser.mjs dev"
   },
   "dependencies": {
     "@microsoft/power-apps": "^1.2.5",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "@azure/msal-browser": "^5.25.1"
   },
   "devDependencies": {
     "@microsoft/power-apps-cli": "1.2.0",

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   History,
   Trash2,
@@ -25,17 +25,29 @@ const pages = [
   { id: "active" as const, label: "Return Active / Delete", Icon: Power },
   { id: "deactivate" as const, label: "Deactivate", Icon: Power },
 ];
-export function App() {
+export function App({
+  browserUser,
+  sessionControls,
+}: {
+  browserUser?: string;
+  sessionControls?: ReactNode;
+}) {
   const [page, setPage] = useState<Page>("createUpdate");
   const [collapsed, setCollapsed] = useState(false);
   const [tableName, setTableName] = useState("");
   const [user, setUser] = useState("");
   const [contextError, setContextError] = useState("");
   const { metadata } = useServices();
-  const standaloneLocal = import.meta.env.DEV && window.self === window.top;
+  const standaloneLocal =
+    !browserUser && import.meta.env.DEV && window.self === window.top;
   const catalog = useLatestRequest<TableMetadata[]>("production-catalog");
   const table = catalog.data?.find((t) => t.logicalName === tableName);
   useEffect(() => {
+    if (browserUser) {
+      setUser(browserUser);
+      void catalog.run((signal) => metadata.listTables(signal));
+      return;
+    }
     if (standaloneLocal) return;
     let live = true;
     const timeout = setTimeout(() => {
@@ -72,7 +84,7 @@ export function App() {
       live = false;
       clearTimeout(timeout);
     };
-  }, [metadata, catalog.run, standaloneLocal]);
+  }, [metadata, catalog.run, standaloneLocal, browserUser]);
   return (
     <div className="app">
       <a className="skip-link" href="#main-content">
@@ -85,6 +97,7 @@ export function App() {
           <strong>{environment.appName}</strong>
         </div>
         <div className="header-right">
+          {sessionControls}
           <span className="environment-chip">
             <span /> Production
           </span>

@@ -57,3 +57,12 @@ Shared state/status policy and mutation service support Inactive target with ETa
 - `npm.cmd run build`: TypeScript và Vite build thành công.
 - Regression: dropdown hiển thị status Inactive mặc định từ metadata; khi đổi status, gửi đúng giá trị đã chọn.
 - Các kiểm tra cập nhật trạng thái dùng transport giả lập; không ghi dữ liệu Production.
+
+## GitHub Pages — 17/10/2026
+
+- User approved public repository and browser Microsoft sign-in on 16/10.
+- 52 automated tests across 12 files; includes tenant/token isolation, scoped browser transport, empty DELETE, ETag, write-no-retry, auth popup gating and stale logout workspace clearing.
+- Power Apps and browser builds checked separately. Pages emits only browser code and dedicated MSAL callback; no dataSourcesInfo/connectionReferences in Pages artifact.
+- Production dependency npm audit: 0 vulnerabilities. Existing dev tooling advisories are not bundled in Pages; CLI dependency compatibility retained.
+- Independent review session interaction race fixed with three red/green regressions. No live Dataverse writes performed.
+- Live Microsoft login remains subject to SPA redirect registration and consent; build/test do not establish these.
