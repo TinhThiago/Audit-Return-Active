@@ -66,3 +66,9 @@ Shared state/status policy and mutation service support Inactive target with ETa
 - Production dependency npm audit: 0 vulnerabilities. Existing dev tooling advisories are not bundled in Pages; CLI dependency compatibility retained.
 - Independent review session interaction race fixed with three red/green regressions. No live Dataverse writes performed.
 - Live Microsoft login remains subject to SPA redirect registration and consent; build/test do not establish these.
+
+## SPA callback path fix — 17/10/2026
+
+- User screenshot exposed concatenated URL Audit-Return-Activeauth-callback.html. GitHub configure-pages may emit base_path without a trailing slash, unlike the local build default.
+- Regression reproduced the exact invalid URL with /Audit-Return-Active; authSettings now resolves the callback against a normalized directory URL. Five cases cover project paths with/without slash and root/custom-domain paths.
+- Existing incorrect Entra URI must be edited to https://tinhthiago.github.io/Audit-Return-Active/auth-callback.html. The old URI is not used by the fixed app.
