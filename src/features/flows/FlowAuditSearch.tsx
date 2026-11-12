@@ -1,9 +1,10 @@
+import type { BrowserAuth } from "../../browser/auth";
 import { useEffect, useRef, useState } from "react";
 import { authSettings } from "../../browser/auth-config";
 import type { AuditService } from "../../data/auditService";
 import { environment } from "../../config/environment";
 import { Message, Spinner } from "../../ui/components";
-import { connectGraph } from "./graphAuth";
+import { connectGraph, flowAuditAuthError } from "./graphAuth";
 import { GraphAudit } from "./graphAudit";
 import type { FlowAuditReport } from "./deletedFlows";
 
@@ -51,12 +52,14 @@ async function fillTitles(
 
 export function FlowAuditSearch({
   browserUser,
+  browserAuth,
   audit,
   busy,
   onBusy,
   onReport,
 }: {
   browserUser?: string;
+  browserAuth?: BrowserAuth;
   audit: AuditService;
   busy: boolean;
   onBusy: (busy: boolean) => void;
@@ -79,6 +82,7 @@ export function FlowAuditSearch({
       const token = await connectGraph(
         signal,
         browserUser?.includes("@") ? browserUser : undefined,
+        browserAuth,
       );
       setProgress("Microsoft đang tra cứu nhật ký. Có thể mất vài phút…");
       const report = await new GraphAudit(token).search(days, signal);
@@ -94,20 +98,7 @@ export function FlowAuditSearch({
       onReport(complete);
     } catch (e) {
       if (!signal.aborted) {
-        const code =
-          e instanceof Error
-            ? e.message.match(/AADSTS\d{4,10}/)?.[0]
-            : undefined;
-        const authError = e && typeof e === "object" && "errorCode" in e;
-        setError(
-          authError
-            ? `Không kết nối được Microsoft Audit${code ? ` (${code})` : ""}. Kiểm tra popup, Client ID, SPA Redirect URI và admin consent.`
-            : e instanceof Error && e.name === "TimeoutError"
-              ? "Đã hết thời gian chờ Microsoft trả kết quả. Hãy thử khoảng thời gian ngắn hơn."
-              : e instanceof Error
-                ? e.message
-                : "Không tải được nhật ký.",
-        );
+        setError(flowAuditAuthError(e));
       }
     } finally {
       if (active.current === controller) {

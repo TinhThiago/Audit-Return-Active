@@ -108,6 +108,7 @@ export function BrowserRoot({ auth: supplied }: { auth?: BrowserAuth }) {
           >
             <App
               browserUser={account.username || account.name || "Microsoft"}
+              browserAuth={auth}
               sessionControls={controls}
             />
           </ServicesProvider>

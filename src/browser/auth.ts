@@ -1,5 +1,6 @@
 import {
   PublicClientApplication,
+  InteractionRequiredAuthError,
   type IPublicClientApplication,
 } from "@azure/msal-browser";
 import { environment } from "../config/environment";
@@ -78,6 +79,57 @@ export class BrowserAuth {
         401,
       );
     }
+  }
+  async connectFlowAudit(signal: AbortSignal) {
+    signal.throwIfAborted();
+    const account = this.getAccount();
+    if (!account) throw new Error("Đăng nhập Microsoft trước khi tải nhật ký.");
+    const checkAccount = () => {
+      signal.throwIfAborted();
+      const current = this.getAccount();
+      if (
+        current?.homeAccountId !== account.homeAccountId ||
+        current.tenantId !== account.tenantId
+      )
+        throw new Error("Tài khoản đã thay đổi. Hãy tải lại nhật ký.");
+    };
+    const request = {
+      account,
+      scopes: ["https://graph.microsoft.com/AuditLogsQuery.Read.All"],
+      redirectUri: this.settings.redirectUri,
+    };
+    const get = async (interactive: boolean) => {
+      checkAccount();
+      const result = await this.msal
+        .acquireTokenSilent(request)
+        .catch((error) => {
+          if (!interactive || !(error instanceof InteractionRequiredAuthError))
+            throw error;
+          checkAccount();
+          return this.msal.acquireTokenPopup({
+            ...request,
+            ...(error.claims ? { claims: error.claims } : {}),
+          });
+        });
+      checkAccount();
+      if (
+        !result.accessToken ||
+        result.account?.homeAccountId !== account.homeAccountId ||
+        result.account.tenantId !== account.tenantId
+      )
+        throw new Error(
+          "Microsoft không trả token Audit cho tài khoản đang dùng.",
+        );
+      return result.accessToken;
+    };
+    let first = await get(true);
+    return async () => {
+      checkAccount();
+      if (!first) return get(false);
+      const token = first;
+      first = "";
+      return token;
+    };
   }
   async signOut() {
     await this.msal.logoutPopup({

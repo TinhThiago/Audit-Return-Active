@@ -1,3 +1,4 @@
+import type { BrowserAuth } from "../../browser/auth";
 import { useMemo, useRef, useState } from "react";
 import { Workflow } from "lucide-react";
 import { useServices } from "../../app/providers";
@@ -17,7 +18,13 @@ Get-AdminFlow -EnvironmentName $environment -IncludeDeleted $true |
   Select-Object FlowName, DisplayName, @{Name='EnvironmentName'; Expression={$environment}} |
   ConvertTo-Json | Set-Content -Encoding UTF8 flow-names.json`;
 
-export function DeletedFlowsPage({ browserUser }: { browserUser?: string }) {
+export function DeletedFlowsPage({
+  browserUser,
+  browserAuth,
+}: {
+  browserUser?: string;
+  browserAuth?: BrowserAuth;
+}) {
   const { audit } = useServices();
   const [liveBusy, setLiveBusy] = useState(false);
   const [report, setReport] = useState<ReturnType<typeof readPurviewCsv>>();
@@ -104,6 +111,7 @@ export function DeletedFlowsPage({ browserUser }: { browserUser?: string }) {
       </div>
       <FlowAuditSearch
         browserUser={browserUser}
+        browserAuth={browserAuth}
         audit={audit}
         busy={liveBusy || busy}
         onBusy={setLiveBusy}

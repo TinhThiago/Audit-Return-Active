@@ -1,3 +1,4 @@
+import type { BrowserAuth } from "../browser/auth";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   History,
@@ -31,9 +32,11 @@ const pages = [
 ];
 export function App({
   browserUser,
+  browserAuth,
   sessionControls,
 }: {
   browserUser?: string;
+  browserAuth?: BrowserAuth;
   sessionControls?: ReactNode;
 }) {
   const [page, setPage] = useState<Page>("createUpdate");
@@ -229,7 +232,10 @@ export function App({
             </Message>
           )}
           {page === "deletedFlows" ? (
-            <DeletedFlowsPage browserUser={browserUser} />
+            <DeletedFlowsPage
+              browserUser={browserUser}
+              browserAuth={browserAuth}
+            />
           ) : page === "active" || page === "deactivate" ? (
             <ActivationPage key={page + tableName} table={table} mode={page} />
           ) : (
