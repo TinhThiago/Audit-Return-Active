@@ -106,6 +106,35 @@ export class AuditService {
         : undefined,
     };
   }
+  async deletedCloudFlowTitle(
+    flowId: string,
+    deletedAt: number,
+    signal?: AbortSignal,
+  ): Promise<string | undefined> {
+    const id = normalizeGuid(flowId);
+    const from = new Date(deletedAt - 300_000).toISOString();
+    const to = new Date(deletedAt + 300_000).toISOString();
+    const page = await this.t.request<ODataPage<JsonRow>>({
+      method: "GET",
+      path:
+        "audits?" +
+        new URLSearchParams({
+          $select: "auditid",
+          $filter: `objecttypecode eq 'workflow' and operation eq 3 and _objectid_value eq ${id} and createdon ge ${from} and createdon le ${to}`,
+          $top: "2",
+        }),
+      signal,
+    });
+    if (page?.value?.length !== 1 || page["@odata.nextLink"]) return undefined;
+    const result = await this.t.request<{
+      AuditDetail?: { OldValue?: JsonRow };
+    }>({
+      method: "GET",
+      path: `audits(${normalizeGuid(String(page.value[0].auditid))})/Microsoft.Dynamics.CRM.RetrieveAuditDetails`,
+      signal,
+    });
+    return scalar(result?.AuditDetail?.OldValue?.name).trim() || undefined;
+  }
   async details(
     id: string,
     table: TableMetadata,

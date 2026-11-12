@@ -49,3 +49,5 @@ Xem [kết quả kiểm tra](docs/verification-results.md). Các ghi chú source
 ## Cloud Flow đã xóa
 
 Mở mục Cloud Flow đã xóa và nạp CSV gốc từ Microsoft Purview (Audit → Search → Deleted flow → Export). Trang hiển thị tên flow nếu log có tên, tài khoản, Flow ID, môi trường và thời điểm xóa. Nếu thiếu tên, nạp flow-names.json theo lệnh chỉ đọc hiển thị trên trang; tên được đối chiếu theo môi trường và Flow ID. Dữ liệu chỉ được xử lý trong tab, không gửi lên máy chủ. Khoảng 21 ngày được tính từ sự kiện xóa và không xác minh trạng thái phục hồi trực tiếp. Xem [hướng dẫn khôi phục của Microsoft](https://learn.microsoft.com/power-automate/how-tos-restore-deleted-flow).
+
+Bản GitHub Pages hỗ trợ tra cứu trực tiếp bằng Microsoft Graph, không cần CSV sau khi cấu hình quyền. Xem [hướng dẫn bật tra cứu trực tiếp](docs/live-flow-audit.md).

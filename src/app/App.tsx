@@ -229,7 +229,7 @@ export function App({
             </Message>
           )}
           {page === "deletedFlows" ? (
-            <DeletedFlowsPage />
+            <DeletedFlowsPage browserUser={browserUser} />
           ) : page === "active" || page === "deactivate" ? (
             <ActivationPage key={page + tableName} table={table} mode={page} />
           ) : (

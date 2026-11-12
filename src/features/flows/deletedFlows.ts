@@ -62,7 +62,96 @@ function parseCsv(input: string) {
   return rows;
 }
 
-export function readPurviewCsv(input: string) {
+export type FlowAuditReport = { events: DeletedFlow[]; unreadable: number };
+
+function normalizeDeletion(
+  data: Data,
+  fallbackKey: string,
+): DeletedFlow | undefined {
+  const operation = first(data.Operation)?.toLowerCase().replace(/\s/g, "");
+  if (!operation || !["deleteflow", "deletedflow"].includes(operation))
+    return undefined;
+  const status = first(data.ResultStatus)?.toLowerCase().trim();
+  if (status && !["success", "succeeded", "true"].includes(status))
+    return undefined;
+  const detailsPath = pathIds(first(data.FlowDetailsUrl));
+  const path = detailsPath.flowId ? detailsPath : pathIds(first(data.ObjectId));
+  const environmentId =
+    first(data.EnvironmentId, data.EnvironmentName, path.environmentId)
+      ?.trim()
+      .toLowerCase() || "";
+  const flowId =
+    id(first(data.FlowId)) ||
+    id(first(data.FlowName)) ||
+    id(first(data.ObjectId)) ||
+    path.flowId;
+  const title =
+    label(first(data.FlowDisplayName)) || label(first(data.DisplayName));
+  const key = first(data.Id, data.ID) || fallbackKey;
+  const timestamp = first(data.CreationTime)?.trim();
+  const time =
+    timestamp && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(timestamp)
+      ? Date.parse(
+          /(?:z|[+-]\d{2}:?\d{2})$/i.test(timestamp)
+            ? timestamp
+            : `${timestamp}Z`,
+        )
+      : NaN;
+  return {
+    key,
+    flowId,
+    environmentId,
+    title,
+    actor: first(data.UserUPN, data.UserId, data.UserKey) || "",
+    deletedAt: Number.isFinite(time) ? time : null,
+  };
+}
+
+export function readGraphRecords(records: unknown[]): FlowAuditReport {
+  const events: DeletedFlow[] = [];
+  const seen = new Set<string>();
+  let unreadable = 0;
+  for (const [index, input] of records.entries()) {
+    const row = object(input);
+    if (!row) {
+      unreadable++;
+      continue;
+    }
+    let data = object(row.auditData);
+    if (!data && typeof row.auditData === "string") {
+      try {
+        data = object(JSON.parse(row.auditData));
+      } catch {
+        unreadable++;
+      }
+    }
+    const type = first(row.auditLogRecordType)?.toLowerCase();
+    if (type && type !== "microsoftflow" && type !== "unknownfuturevalue")
+      continue;
+    const event = normalizeDeletion(
+      {
+        ...data,
+        Id: first(row.id, data?.Id),
+        Operation: first(row.operation, data?.Operation),
+        CreationTime: first(data?.CreationTime, row.createdDateTime),
+        UserId: first(data?.UserId, row.userPrincipalName, row.userId),
+        ObjectId: first(data?.ObjectId, row.objectId),
+      },
+      `graph-${index}`,
+    );
+    if (!event || seen.has(event.key)) continue;
+    seen.add(event.key);
+    events.push(event);
+  }
+  return {
+    events: events.sort(
+      (a, b) => (b.deletedAt ?? -Infinity) - (a.deletedAt ?? -Infinity),
+    ),
+    unreadable,
+  };
+}
+
+export function readPurviewCsv(input: string): FlowAuditReport {
   const [header, ...rows] = parseCsv(input);
   const col = (name: string) =>
     header?.findIndex((x) => x.trim().toLowerCase() === name) ?? -1;
@@ -88,48 +177,17 @@ export function readPurviewCsv(input: string) {
       unreadable++;
       continue;
     }
-    const operation = first(data.Operation, row[operations])
-      ?.toLowerCase()
-      .replace(/\s/g, "");
-    if (!operation || !["deleteflow", "deletedflow"].includes(operation))
-      continue;
-    const status = first(data.ResultStatus)?.toLowerCase().trim();
-    if (status && !["success", "succeeded", "true"].includes(status)) continue;
-    const detailsPath = pathIds(first(data.FlowDetailsUrl));
-    const path = detailsPath.flowId
-      ? detailsPath
-      : pathIds(first(data.ObjectId));
-    const environmentId =
-      first(data.EnvironmentId, data.EnvironmentName, path.environmentId)
-        ?.trim()
-        .toLowerCase() || "";
-    const flowId =
-      id(first(data.FlowId)) ||
-      id(first(data.FlowName)) ||
-      id(first(data.ObjectId)) ||
-      path.flowId;
-    const title =
-      label(first(data.FlowDisplayName)) || label(first(data.DisplayName));
-    const key = first(data.Id, data.ID) || `row-${index}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const timestamp = first(data.CreationTime)?.trim();
-    const time =
-      timestamp && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/i.test(timestamp)
-        ? Date.parse(
-            /(?:z|[+-]\d{2}:?\d{2})$/i.test(timestamp)
-              ? timestamp
-              : `${timestamp}Z`,
-          )
-        : NaN;
-    events.push({
-      key,
-      flowId,
-      environmentId,
-      title,
-      actor: first(data.UserUPN, data.UserId, row[user], data.UserKey) || "",
-      deletedAt: Number.isFinite(time) ? time : null,
-    });
+    const event = normalizeDeletion(
+      {
+        ...data,
+        Operation: first(data.Operation, row[operations]),
+        UserId: first(data.UserId, row[user]),
+      },
+      `row-${index}`,
+    );
+    if (!event || seen.has(event.key)) continue;
+    seen.add(event.key);
+    events.push(event);
   }
   return {
     events: events.sort(

@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Workflow } from "lucide-react";
+import { useServices } from "../../app/providers";
+import { FlowAuditSearch } from "./FlowAuditSearch";
 import { Empty, formatDate, GuidText, Message } from "../../ui/components";
 import { environment } from "../../config/environment";
 import {
@@ -15,7 +17,9 @@ Get-AdminFlow -EnvironmentName $environment -IncludeDeleted $true |
   Select-Object FlowName, DisplayName, @{Name='EnvironmentName'; Expression={$environment}} |
   ConvertTo-Json | Set-Content -Encoding UTF8 flow-names.json`;
 
-export function DeletedFlowsPage() {
+export function DeletedFlowsPage({ browserUser }: { browserUser?: string }) {
+  const { audit } = useServices();
+  const [liveBusy, setLiveBusy] = useState(false);
   const [report, setReport] = useState<ReturnType<typeof readPurviewCsv>>();
   const [names, setNames] = useState<ReturnType<typeof readFlowNames>>(
     new Map(),
@@ -98,7 +102,23 @@ export function DeletedFlowsPage() {
           <Workflow size={22} />
         </span>
       </div>
-      <section className="filter-card" aria-label="Nguồn nhật ký Cloud Flow">
+      <FlowAuditSearch
+        browserUser={browserUser}
+        audit={audit}
+        busy={liveBusy || busy}
+        onBusy={setLiveBusy}
+        onReport={(result) => {
+          setReport(result);
+          setLimit(50);
+          setError("");
+        }}
+      />
+      <details className="filter-card" open={browserUser ? undefined : true}>
+        <summary>
+          {browserUser
+            ? "Phương án dự phòng: nạp file nhật ký hoặc tên flow"
+            : "Nguồn nhật ký Cloud Flow"}
+        </summary>
         <p>
           Trong{" "}
           <a
@@ -119,7 +139,7 @@ export function DeletedFlowsPage() {
               ref={csvInput}
               type="file"
               accept=".csv,text/csv"
-              disabled={busy}
+              disabled={busy || liveBusy}
               onChange={(e) => void load(e.currentTarget.files?.[0], "audit")}
             />
           </label>
@@ -129,11 +149,16 @@ export function DeletedFlowsPage() {
               ref={namesInput}
               type="file"
               accept=".json,application/json"
-              disabled={busy}
+              disabled={busy || liveBusy}
               onChange={(e) => void load(e.currentTarget.files?.[0], "names")}
             />
           </label>
-          <button type="button" className="button" onClick={clear}>
+          <button
+            type="button"
+            className="button"
+            disabled={liveBusy}
+            onClick={clear}
+          >
             Xóa dữ liệu đã nạp
           </button>
         </div>
@@ -151,7 +176,7 @@ export function DeletedFlowsPage() {
             thiếu tên, trang sẽ báo rõ và vẫn hiển thị Flow ID.
           </p>
         </details>
-      </section>
+      </details>
       {error && <Message>{error}</Message>}
       {!!report?.unreadable && (
         <Message kind="warning">
@@ -183,9 +208,13 @@ export function DeletedFlowsPage() {
           </div>
         )}
         {busy && <Empty loading title="Đang đọc file…" />}
-        {!busy && !report && (
+        {!busy && !liveBusy && !report && (
           <Empty title="Chưa nạp nhật ký">
-            <span>Chọn file CSV Purview để xem sự kiện xóa.</span>
+            <span>
+              {browserUser
+                ? "Bấm Tải lịch sử xóa để xem nhật ký."
+                : "Chọn file CSV Purview để xem sự kiện xóa."}
+            </span>
           </Empty>
         )}
         {!busy && report && !filtered.length && (
