@@ -1385,3 +1385,61 @@ main {
     padding-block: 8px;
   }
 }
+
+.flow-import {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: end;
+  margin: 16px 0;
+}
+.flow-import label,
+.flow-search label {
+  display: grid;
+  gap: 6px;
+  font-weight: 500;
+}
+.flow-import input,
+.flow-search input {
+  max-width: 100%;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.flow-help summary {
+  cursor: pointer;
+}
+.flow-help pre {
+  overflow: auto;
+  padding: 12px;
+  background: #f8f9fa;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.flow-search {
+  padding: 14px 18px;
+  max-width: 460px;
+}
+.flow-results {
+  overflow: auto;
+}
+.flow-results table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.flow-results th,
+.flow-results td {
+  padding: 12px 16px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.flow-results th {
+  background: #f8f9fa;
+}
+.flow-results small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}

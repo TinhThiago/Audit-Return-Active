@@ -9,6 +9,7 @@ import {
   RefreshCw,
   ChevronRight,
   ShieldCheck,
+  Workflow,
 } from "lucide-react";
 import { useServices } from "./providers";
 import { useLatestRequest } from "./useLatestRequest";
@@ -18,12 +19,15 @@ import { TablePicker } from "../features/shared/TablePicker";
 import { AuditPage } from "../features/audit/AuditPage";
 import { ActivationPage } from "../features/activation/ActivationPage";
 import { Message, Spinner } from "../ui/components";
-type Page = "createUpdate" | "delete" | "active" | "deactivate";
+import { DeletedFlowsPage } from "../features/flows/DeletedFlowsPage";
+type Page =
+  "createUpdate" | "delete" | "active" | "deactivate" | "deletedFlows";
 const pages = [
   { id: "createUpdate" as const, label: "Create / Update", Icon: History },
   { id: "delete" as const, label: "Audit Delete", Icon: Trash2 },
   { id: "active" as const, label: "Return Active / Delete", Icon: Power },
   { id: "deactivate" as const, label: "Deactivate", Icon: Power },
+  { id: "deletedFlows" as const, label: "Cloud Flow đã xóa", Icon: Workflow },
 ];
 export function App({
   browserUser,
@@ -148,7 +152,7 @@ export function App({
               </button>
             ))}
           </nav>
-          {!collapsed && (
+          {!collapsed && page !== "deletedFlows" && (
             <div className="sidebar-table">
               <div className="sidebar-caption">
                 <Database size={15} />
@@ -186,7 +190,7 @@ export function App({
             <ChevronRight size={12} />{" "}
             <span>{pages.find((p) => p.id === page)?.label}</span>
           </div>
-          {collapsed && (
+          {collapsed && page !== "deletedFlows" && (
             <div className="inline-table-picker">
               <TablePicker
                 tables={catalog.data || []}
@@ -196,7 +200,7 @@ export function App({
               />
             </div>
           )}
-          {standaloneLocal && (
+          {standaloneLocal && page !== "deletedFlows" && (
             <Message kind="info">
               <strong>Chạy local với dữ liệu Dataverse</strong>
               <p>
@@ -208,8 +212,10 @@ export function App({
               <p>Server local phải tiếp tục chạy trong lúc kiểm thử.</p>
             </Message>
           )}
-          {contextError && <Message kind="info">{contextError}</Message>}
-          {catalog.error && (
+          {page !== "deletedFlows" && contextError && (
+            <Message kind="info">{contextError}</Message>
+          )}
+          {page !== "deletedFlows" && catalog.error && (
             <Message>
               {catalog.error}
               <button
@@ -222,7 +228,9 @@ export function App({
               </button>
             </Message>
           )}
-          {page === "active" || page === "deactivate" ? (
+          {page === "deletedFlows" ? (
+            <DeletedFlowsPage />
+          ) : page === "active" || page === "deactivate" ? (
             <ActivationPage key={page + tableName} table={table} mode={page} />
           ) : (
             <AuditPage key={page + tableName} table={table} mode={page} />
@@ -233,7 +241,11 @@ export function App({
               <span
                 className={`connection-dot ${catalog.data ? "connected" : ""}`}
               />
-              {catalog.data ? "Đã tải metadata" : "Chưa tải metadata"}
+              {page === "deletedFlows"
+                ? "Nhật ký Microsoft Purview"
+                : catalog.data
+                  ? "Đã tải metadata"
+                  : "Chưa tải metadata"}
             </span>
           </footer>
         </main>

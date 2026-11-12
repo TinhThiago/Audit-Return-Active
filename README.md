@@ -45,3 +45,7 @@ Token do MSAL quản lý trong session. Không lưu payload audit/bản ghi vào
 52 tests kiểm tra domain, service, transport và UI bằng dữ liệu giả lập. Build TypeScript, Power Apps và Pages được kiểm tra riêng. Không chạy Active, Deactivate hoặc Delete thật trên Production để nghiệm thu Pages. Callback Entra và quyền người dùng cần kiểm tra sau khi quản trị cấu hình.
 
 Xem [kết quả kiểm tra](docs/verification-results.md). Các ghi chú source-only ngày 07–10/10 là lịch sử trước yêu cầu GitHub Pages đã duyệt ngày 16/10/2026.
+
+## Cloud Flow đã xóa
+
+Mở mục Cloud Flow đã xóa và nạp CSV gốc từ Microsoft Purview (Audit → Search → Deleted flow → Export). Trang hiển thị tên flow nếu log có tên, tài khoản, Flow ID, môi trường và thời điểm xóa. Nếu thiếu tên, nạp flow-names.json theo lệnh chỉ đọc hiển thị trên trang; tên được đối chiếu theo môi trường và Flow ID. Dữ liệu chỉ được xử lý trong tab, không gửi lên máy chủ. Khoảng 21 ngày được tính từ sự kiện xóa và không xác minh trạng thái phục hồi trực tiếp. Xem [hướng dẫn khôi phục của Microsoft](https://learn.microsoft.com/power-automate/how-tos-restore-deleted-flow).
