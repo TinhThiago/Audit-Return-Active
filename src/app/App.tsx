@@ -1,5 +1,6 @@
 import type { BrowserAuth } from "../browser/auth";
 import { useEffect, useState, type ReactNode } from "react";
+import { AppLogo } from "../ui/AppLogo";
 import {
   History,
   Trash2,
@@ -99,7 +100,7 @@ export function App({
       </a>
       <header className="global-header">
         <div className="brand">
-          <span className="brand-monogram">PH</span>
+          <AppLogo size={28} />
           <span className="brand-divider" />
           <strong>{environment.appName}</strong>
         </div>

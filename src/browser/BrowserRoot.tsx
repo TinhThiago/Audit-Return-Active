@@ -1,3 +1,4 @@
+import { AppLogo } from "../ui/AppLogo";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { App } from "../app/App";
 import { ServicesProvider } from "../app/providers";
@@ -116,7 +117,7 @@ export function BrowserRoot({ auth: supplied }: { auth?: BrowserAuth }) {
       ) : (
         <div className="login-page">
           <section className="login-card">
-            <span className="brand-monogram">PH</span>
+            <AppLogo size={48} />
             <span className="eyebrow">DATAVERSE AUDIT</span>
             <h1>Audit- Return Active</h1>
             <p>
