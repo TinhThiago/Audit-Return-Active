@@ -62,14 +62,23 @@ function parseCsv(input: string) {
   return rows;
 }
 
-export type FlowAuditReport = { events: DeletedFlow[]; unreadable: number };
+export type FlowAuditReport = {
+  events: DeletedFlow[];
+  unreadable: number;
+  graph?: { received: number; days: number; workloadOnly: boolean };
+};
 
 function normalizeDeletion(
   data: Data,
   fallbackKey: string,
 ): DeletedFlow | undefined {
-  const operation = first(data.Operation)?.toLowerCase().replace(/\s/g, "");
-  if (!operation || !["deleteflow", "deletedflow"].includes(operation))
+  const operation = first(data.Operation)
+    ?.toLowerCase()
+    .replace(/[\s_-]/g, "");
+  if (
+    !operation ||
+    !["deleteflow", "deletedflow", "flowdeleted"].includes(operation)
+  )
     return undefined;
   const status = first(data.ResultStatus)?.toLowerCase().trim();
   if (status && !["success", "succeeded", "true"].includes(status))
@@ -133,6 +142,7 @@ export function readGraphRecords(records: unknown[]): FlowAuditReport {
         ...data,
         Id: first(row.id, data?.Id),
         Operation: first(row.operation, data?.Operation),
+        ResultStatus: first(data?.ResultStatus, row.resultStatus),
         CreationTime: first(data?.CreationTime, row.createdDateTime),
         UserId: first(data?.UserId, row.userPrincipalName, row.userId),
         ObjectId: first(data?.ObjectId, row.objectId),

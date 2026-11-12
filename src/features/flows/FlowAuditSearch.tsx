@@ -57,6 +57,7 @@ export function FlowAuditSearch({
   busy,
   onBusy,
   onReport,
+  emptyGraph,
 }: {
   browserUser?: string;
   browserAuth?: BrowserAuth;
@@ -64,13 +65,14 @@ export function FlowAuditSearch({
   busy: boolean;
   onBusy: (busy: boolean) => void;
   onReport: (report: FlowAuditReport) => void;
+  emptyGraph?: FlowAuditReport["graph"];
 }) {
   const [days, setDays] = useState(21);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
   const active = useRef<AbortController | null>(null);
   useEffect(() => () => active.current?.abort(), []);
-  const search = async () => {
+  const search = async (workloadOnly = false) => {
     if (active.current || busy) return;
     const controller = new AbortController();
     const signal = controller.signal;
@@ -85,7 +87,12 @@ export function FlowAuditSearch({
         browserAuth,
       );
       setProgress("Microsoft đang tra cứu nhật ký. Có thể mất vài phút…");
-      const report = await new GraphAudit(token).search(days, signal);
+      const report = await new GraphAudit(token).search(
+        days,
+        signal,
+        Date.now(),
+        workloadOnly,
+      );
       signal.throwIfAborted();
       onReport(report);
       setProgress("Đang đối chiếu tên flow từ audit Dataverse nếu có…");
@@ -142,6 +149,16 @@ export function FlowAuditSearch({
         >
           Tải lịch sử xóa
         </button>
+        {emptyGraph && emptyGraph.days === days && !emptyGraph.workloadOnly && (
+          <button
+            type="button"
+            className="button"
+            disabled={busy}
+            onClick={() => void search(true)}
+          >
+            Kiểm tra nguồn nhật ký
+          </button>
+        )}
         {progress && (
           <button
             type="button"

@@ -123,3 +123,32 @@ it("reads the old Dataverse workflow name only from an unambiguous matching dele
   ).toBeUndefined();
   expect(ambiguous.requests).toHaveLength(1);
 });
+
+it("distinguishes no records from an alternate delete operation found by workload-only lookup", async () => {
+  const fetch = vi
+    .fn<typeof globalThis.fetch>()
+    .mockResolvedValueOnce(result({ id: "query-id", status: "succeeded" }))
+    .mockResolvedValueOnce(result({ value: [] }))
+    .mockResolvedValueOnce(result({ id: "query-id", status: "succeeded" }))
+    .mockResolvedValueOnce(
+      result({
+        value: [
+          { ...record, operation: "FlowDeleted" },
+          { ...record, id: "edit", operation: "EditFlow" },
+          { ...record, id: "failed", resultStatus: "Failed" },
+        ],
+      }),
+    );
+  const audit = new GraphAudit(async () => "token", fetch, pause);
+  const signal = new AbortController().signal;
+  expect(await audit.search(7, signal)).toMatchObject({
+    events: [],
+    graph: { received: 0, days: 7, workloadOnly: false },
+  });
+  const report = await audit.search(7, signal, Date.now(), true);
+  expect(report.graph).toEqual({ received: 3, days: 7, workloadOnly: true });
+  expect(report.events.map((event) => event.key)).toEqual(["event"]);
+  const body = JSON.parse(String(fetch.mock.calls[2][1]?.body));
+  expect(body.recordTypeFilters).toEqual(["microsoftFlow"]);
+  expect(body).not.toHaveProperty("operationFilters");
+});

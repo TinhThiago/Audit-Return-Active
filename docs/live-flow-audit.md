@@ -17,3 +17,5 @@ Bản GitHub Pages dùng Microsoft Graph Audit Search với tài khoản ngườ
 - Kết quả chỉ nằm trong tab. App lấy token Microsoft Graph cho thao tác tra cứu. Token Dataverse không được gửi tới Microsoft Graph. Hết thời gian chờ hoặc không đủ quyền sẽ báo rõ. Không có kết quả có thể do thời gian ghi log, lưu giữ log hoặc phạm vi quyền.
 
 Tham khảo: [Graph Audit Search](https://learn.microsoft.com/en-us/graph/api/security-auditcoreroot-post-auditlogqueries?view=graph-rest-1.0) · [Vai trò Purview Audit](https://learn.microsoft.com/en-us/purview/audit-search) · [Audit Workflow và Power Automate](https://learn.microsoft.com/en-us/power-automate/guidance/coding-guidelines/use-auditing-dataverse).
+
+Nếu báo không có sự kiện xóa, chọn khoảng thời gian khác hoặc dùng **Kiểm tra nguồn nhật ký**. Nút này bỏ bộ lọc DeleteFlow trên Graph nhưng chỉ tải loại microsoftFlow; giao diện vẫn chỉ hiện sự kiện xóa. So sánh số bản ghi Graph trả về với số sự kiện xóa để phân biệt nguồn trống và nhật ký có hoạt động khác.

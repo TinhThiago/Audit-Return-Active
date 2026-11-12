@@ -27,7 +27,12 @@ export class GraphAudit {
     private pause = wait,
   ) {}
 
-  async search(days: number, signal: AbortSignal, now = Date.now()) {
+  async search(
+    days: number,
+    signal: AbortSignal,
+    now = Date.now(),
+    workloadOnly = false,
+  ) {
     if (![7, 21, 30, 90].includes(days))
       throw new Error("Khoảng thời gian không hợp lệ.");
     const deadline = AbortSignal.any([signal, AbortSignal.timeout(300_000)]);
@@ -84,7 +89,7 @@ export class GraphAudit {
         filterStartDateTime: new Date(now - days * day).toISOString(),
         filterEndDateTime: new Date(now).toISOString(),
         recordTypeFilters: ["microsoftFlow"],
-        operationFilters: ["DeleteFlow"],
+        ...(!workloadOnly ? { operationFilters: ["DeleteFlow"] } : {}),
       }),
     );
     if (typeof created.id !== "string" || !queryIdPattern.test(created.id))
@@ -133,6 +138,9 @@ export class GraphAudit {
         throw new Error("Liên kết phân trang nhật ký không hợp lệ.");
       next = continuation ? new URL(continuation, origin) : undefined;
     }
-    return readGraphRecords(records);
+    return {
+      ...readGraphRecords(records),
+      graph: { received: records.length, days, workloadOnly },
+    };
   }
 }
