@@ -9,17 +9,23 @@ import {
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { useState } from "react";
+import { GraphAuditWaitError } from "../src/features/flows/graphAudit";
 import { FlowAuditSearch } from "../src/features/flows/FlowAuditSearch";
 import type { AuditService } from "../src/data/auditService";
 import type { FlowAuditReport } from "../src/features/flows/deletedFlows";
 
-const { search, connect } = vi.hoisted(() => ({
+const { search, connect, resume } = vi.hoisted(() => ({
   search: vi.fn(),
   connect: vi.fn(),
+  resume: vi.fn(),
 }));
-vi.mock("../src/features/flows/graphAudit", () => ({
+vi.mock("../src/features/flows/graphAudit", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../src/features/flows/graphAudit")
+  >()),
   GraphAudit: class {
     search = search;
+    resume = resume;
   },
 }));
 vi.mock("../src/features/flows/graphAuth", () => ({
@@ -89,4 +95,24 @@ it("shows diagnostic errors beside the button", async () => {
   expect((await screen.findByRole("alert")).textContent).toContain(
     "Graph từ chối truy cập",
   );
+});
+
+it("offers to continue waiting on the same query after a timeout", async () => {
+  connect.mockResolvedValue(async () => "token");
+  const query = { id: "existing-query", days: 21, workloadOnly: true };
+  search.mockRejectedValueOnce(new GraphAuditWaitError(query));
+  resume.mockResolvedValueOnce({
+    events: [],
+    unreadable: 0,
+    graph: { received: 0, days: 21, workloadOnly: true },
+  });
+  render(<Harness />);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Kiểm tra nguồn nhật ký" }),
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Tiếp tục chờ" }));
+  await screen.findByText(/Microsoft Graph trả về 0 bản ghi/);
+  expect(search).toHaveBeenCalledTimes(1);
+  expect(resume).toHaveBeenCalledWith(query, expect.any(AbortSignal));
+  expect(screen.queryByRole("button", { name: "Tiếp tục chờ" })).toBeNull();
 });

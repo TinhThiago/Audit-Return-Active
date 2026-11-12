@@ -152,3 +152,52 @@ it("distinguishes no records from an alternate delete operation found by workloa
   expect(body.recordTypeFilters).toEqual(["microsoftFlow"]);
   expect(body).not.toHaveProperty("operationFilters");
 });
+
+it("resumes a timed-out Graph query without creating a second query", async () => {
+  const fetch = vi
+    .fn<typeof globalThis.fetch>()
+    .mockResolvedValueOnce(result({ id: "query-id", status: "running" }))
+    .mockResolvedValueOnce(result({ status: "succeeded" }))
+    .mockResolvedValueOnce(result({ value: [record] }));
+  const timeout = new AbortController();
+  const spy = vi
+    .spyOn(AbortSignal, "timeout")
+    .mockReturnValueOnce(timeout.signal);
+  const signal = new AbortController().signal;
+  let caught: unknown;
+  try {
+    await new GraphAudit(
+      async () => "token",
+      fetch,
+      async (_ms, waiting) => {
+        timeout.abort(new DOMException("Time limit", "TimeoutError"));
+        waiting.throwIfAborted();
+      },
+    ).search(7, signal, Date.now(), true);
+  } catch (error) {
+    caught = error;
+  } finally {
+    spy.mockRestore();
+  }
+  expect(caught).toMatchObject({
+    name: "GraphAuditWaitError",
+    query: { id: "query-id", days: 7, workloadOnly: true },
+  });
+  const { query } = caught as {
+    query: { id: string; days: number; workloadOnly: boolean };
+  };
+  const report = await new GraphAudit(async () => "token", fetch, pause).resume(
+    query,
+    signal,
+  );
+  expect(report.events).toHaveLength(1);
+  expect(report.graph).toEqual({ received: 1, days: 7, workloadOnly: true });
+  expect(fetch.mock.calls.map((call) => call[1]?.method)).toEqual([
+    "POST",
+    "GET",
+    "GET",
+  ]);
+  expect(String(fetch.mock.calls[1][0])).toBe(
+    records.replace(/\/records$/, ""),
+  );
+});

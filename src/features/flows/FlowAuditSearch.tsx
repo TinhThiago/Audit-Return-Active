@@ -5,7 +5,11 @@ import type { AuditService } from "../../data/auditService";
 import { environment } from "../../config/environment";
 import { Message, Spinner } from "../../ui/components";
 import { connectGraph, flowAuditAuthError } from "./graphAuth";
-import { GraphAudit } from "./graphAudit";
+import {
+  GraphAudit,
+  GraphAuditWaitError,
+  type GraphAuditQuery,
+} from "./graphAudit";
 import type { FlowAuditReport } from "./deletedFlows";
 
 async function fillTitles(
@@ -68,6 +72,7 @@ export function FlowAuditSearch({
   report?: FlowAuditReport;
 }) {
   const [days, setDays] = useState(21);
+  const [pendingQuery, setPendingQuery] = useState<GraphAuditQuery>();
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
   const [cancelled, setCancelled] = useState(false);
@@ -75,6 +80,11 @@ export function FlowAuditSearch({
   useEffect(() => () => active.current?.abort(), []);
   const search = async (workloadOnly = false) => {
     if (active.current || busy) return;
+    const resume =
+      pendingQuery?.days === days && pendingQuery.workloadOnly === workloadOnly
+        ? pendingQuery
+        : undefined;
+    setPendingQuery(resume);
     const controller = new AbortController();
     const signal = controller.signal;
     active.current = controller;
@@ -82,9 +92,11 @@ export function FlowAuditSearch({
     setError("");
     setCancelled(false);
     setProgress(
-      workloadOnly
-        ? "Đang bắt đầu kiểm tra nguồn nhật ký…"
-        : "Đang kết nối Microsoft Audit…",
+      resume
+        ? "Đang kết nối lại truy vấn Microsoft…"
+        : workloadOnly
+          ? "Đang bắt đầu kiểm tra nguồn nhật ký…"
+          : "Đang kết nối Microsoft Audit…",
     );
     try {
       const token = await connectGraph(
@@ -98,13 +110,12 @@ export function FlowAuditSearch({
           ? "Đang kiểm tra nhật ký Power Automate. Có thể mất vài phút…"
           : "Microsoft đang tra cứu nhật ký. Có thể mất vài phút…",
       );
-      const report = await new GraphAudit(token).search(
-        days,
-        signal,
-        Date.now(),
-        workloadOnly,
-      );
+      const graphAudit = new GraphAudit(token);
+      const report = await (resume
+        ? graphAudit.resume(resume, signal)
+        : graphAudit.search(days, signal, Date.now(), workloadOnly));
       signal.throwIfAborted();
+      setPendingQuery(undefined);
       onReport(report);
       if (!report.events.length) return;
       setProgress("Đang đối chiếu tên flow từ audit Dataverse nếu có…");
@@ -117,6 +128,7 @@ export function FlowAuditSearch({
       onReport(complete);
     } catch (e) {
       if (!signal.aborted) {
+        setPendingQuery(e instanceof GraphAuditWaitError ? e.query : undefined);
         setError(flowAuditAuthError(e));
       } else if (active.current === controller) {
         setCancelled(true);
@@ -153,9 +165,9 @@ export function FlowAuditSearch({
               setCancelled(false);
             }}
           >
-            {[7, 21, 30, 90].map((n) => (
+            {[1, 7, 21, 30, 90].map((n) => (
               <option key={n} value={n}>
-                {n} ngày gần đây
+                {n === 1 ? "24 giờ gần đây" : n + " ngày gần đây"}
               </option>
             ))}
           </select>
@@ -176,6 +188,16 @@ export function FlowAuditSearch({
         >
           Kiểm tra nguồn nhật ký
         </button>
+        {pendingQuery?.days === days && !progress && (
+          <button
+            type="button"
+            className="button"
+            disabled={busy}
+            onClick={() => void search(pendingQuery.workloadOnly)}
+          >
+            Tiếp tục chờ
+          </button>
+        )}
         {progress && (
           <button
             type="button"
