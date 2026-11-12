@@ -3,7 +3,7 @@ import { authSettings } from "../../browser/auth-config";
 import type { AuditService } from "../../data/auditService";
 import { environment } from "../../config/environment";
 import { Message, Spinner } from "../../ui/components";
-import { auditClientId, connectGraph } from "./graphAuth";
+import { connectGraph } from "./graphAuth";
 import { GraphAudit } from "./graphAudit";
 import type { FlowAuditReport } from "./deletedFlows";
 
@@ -62,7 +62,6 @@ export function FlowAuditSearch({
   onBusy: (busy: boolean) => void;
   onReport: (report: FlowAuditReport) => void;
 }) {
-  const [clientId, setClientId] = useState(auditClientId);
   const [days, setDays] = useState(21);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
@@ -78,7 +77,6 @@ export function FlowAuditSearch({
     setProgress("Đang kết nối Microsoft Audit…");
     try {
       const token = await connectGraph(
-        clientId.trim(),
         signal,
         browserUser?.includes("@") ? browserUser : undefined,
       );
@@ -145,24 +143,10 @@ export function FlowAuditSearch({
             ))}
           </select>
         </label>
-        {!auditClientId && (
-          <label>
-            Client ID của app đọc Audit
-            <input
-              type="text"
-              value={clientId}
-              disabled={busy}
-              onChange={(e) => setClientId(e.target.value)}
-              spellCheck={false}
-              autoComplete="off"
-              placeholder="Application (client) ID"
-            />
-          </label>
-        )}
         <button
           type="button"
           className="button primary"
-          disabled={busy || !clientId.trim()}
+          disabled={busy}
           onClick={() => void search()}
         >
           Tải lịch sử xóa
@@ -183,23 +167,14 @@ export function FlowAuditSearch({
         </p>
       )}
       {error && <Message>{error}</Message>}
-      <details
-        className="flow-help"
-        open={!auditClientId && !clientId ? true : undefined}
-      >
-        <summary>Cấu hình quyền đọc một lần</summary>
+      <details className="flow-help">
+        <summary>Quyền cần để tra cứu</summary>
         <p>
-          Trong Entra, tạo đăng ký ứng dụng riêng chỉ cho tenant Phước Hưng.
-          Thêm nền tảng SPA với Redirect URI{" "}
-          <code>{authSettings().redirectUri}</code>. Thêm Microsoft Graph →
-          Delegated → <code>AuditLogsQuery.Read.All</code> và nhờ quản trị viên
-          grant admin consent. Tài khoản tra cứu cần quyền đọc Audit trong
-          Purview.
-        </p>
-        <p>
-          Nhập Application (client) ID ở trên hoặc đặt biến Actions{" "}
-          <code>VITE_FLOW_AUDIT_CLIENT_ID</code> để mọi người dùng đúng đăng ký.
-          Không dùng Client ID của Transfer Environment.
+          Trang dùng đăng ký Microsoft Entra của app theo mặc định. Đăng ký cần
+          quyền Microsoft Graph Delegated <code>AuditLogsQuery.Read.All</code>,
+          admin consent và SPA Redirect URI{" "}
+          <code>{authSettings().redirectUri}</code>. Tài khoản đăng nhập cần
+          quyền đọc Audit trong Purview.
         </p>
       </details>
     </section>

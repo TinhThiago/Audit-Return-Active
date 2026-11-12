@@ -2,22 +2,13 @@ import { PublicClientApplication } from "@azure/msal-browser";
 import { authSettings } from "../../browser/auth-config";
 
 const scopes = ["https://graph.microsoft.com/AuditLogsQuery.Read.All"];
-export const auditClientId =
-  (import.meta.env.VITE_FLOW_AUDIT_CLIENT_ID as string | undefined)?.trim() ||
-  "";
-
-export async function connectGraph(
-  clientId: string,
-  signal: AbortSignal,
-  loginHint?: string,
-) {
+export async function connectGraph(signal: AbortSignal, loginHint?: string) {
   const settings = authSettings();
-  if (
-    !/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(clientId) ||
-    clientId.toLowerCase() === settings.clientId.toLowerCase()
-  )
+  const clientId =
+    import.meta.env.VITE_FLOW_AUDIT_CLIENT_ID?.trim() || settings.clientId;
+  if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(clientId))
     throw new Error(
-      "Nhập Client ID của đăng ký Entra riêng dành cho nhật ký Cloud Flow.",
+      "Client ID của app đọc Audit không hợp lệ. Liên hệ quản trị viên để kiểm tra cấu hình.",
     );
   const msal = new PublicClientApplication({
     auth: {
