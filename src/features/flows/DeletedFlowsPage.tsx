@@ -115,7 +115,7 @@ export function DeletedFlowsPage({
         audit={audit}
         busy={liveBusy || busy}
         onBusy={setLiveBusy}
-        emptyGraph={report?.events.length === 0 ? report.graph : undefined}
+        report={report}
         onReport={(result) => {
           setReport(result);
           setLimit(50);
@@ -234,28 +234,11 @@ export function DeletedFlowsPage({
                 : "Không tìm thấy sự kiện xóa"
             }
           >
-            {report.events.length > 0 ? (
-              "Hãy xóa từ khóa hoặc thử tên, Flow ID khác."
-            ) : report.graph ? (
-              <>
-                <span>
-                  Microsoft Graph trả về {report.graph.received} bản ghi trong{" "}
-                  {report.graph.days} ngày
-                  {report.graph.workloadOnly
-                    ? " khi kiểm tra toàn bộ loại sự kiện Power Automate"
-                    : " với bộ lọc DeleteFlow"}
-                  .
-                </span>
-                <br />
-                {report.graph.workloadOnly
-                  ? report.graph.received
-                    ? "Có nhật ký Power Automate, nhưng chưa nhận diện được sự kiện xóa thành công."
-                    : "Graph chưa trả về nhật ký Power Automate trong phạm vi của tài khoản. Hãy kiểm tra khoảng ngày, quyền đọc và cấu hình ghi nhật ký."
-                  : "Chọn khoảng thời gian rộng hơn hoặc bấm Kiểm tra nguồn nhật ký để bỏ bộ lọc theo mã sự kiện."}
-              </>
-            ) : (
-              "File đã nạp không có sự kiện xóa phù hợp."
-            )}
+            {report.events.length > 0
+              ? "Hãy xóa từ khóa hoặc thử tên, Flow ID khác."
+              : report.graph
+                ? "Xem kết quả tra cứu Microsoft Graph ở phần trên."
+                : "File đã nạp không có sự kiện xóa phù hợp."}
           </Empty>
         )}
         {!busy && filtered.length > 0 && (

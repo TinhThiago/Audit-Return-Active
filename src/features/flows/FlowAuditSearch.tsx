@@ -57,7 +57,7 @@ export function FlowAuditSearch({
   busy,
   onBusy,
   onReport,
-  emptyGraph,
+  report,
 }: {
   browserUser?: string;
   browserAuth?: BrowserAuth;
@@ -65,11 +65,12 @@ export function FlowAuditSearch({
   busy: boolean;
   onBusy: (busy: boolean) => void;
   onReport: (report: FlowAuditReport) => void;
-  emptyGraph?: FlowAuditReport["graph"];
+  report?: FlowAuditReport;
 }) {
   const [days, setDays] = useState(21);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
+  const [cancelled, setCancelled] = useState(false);
   const active = useRef<AbortController | null>(null);
   useEffect(() => () => active.current?.abort(), []);
   const search = async (workloadOnly = false) => {
@@ -79,14 +80,24 @@ export function FlowAuditSearch({
     active.current = controller;
     onBusy(true);
     setError("");
-    setProgress("Đang kết nối Microsoft Audit…");
+    setCancelled(false);
+    setProgress(
+      workloadOnly
+        ? "Đang bắt đầu kiểm tra nguồn nhật ký…"
+        : "Đang kết nối Microsoft Audit…",
+    );
     try {
       const token = await connectGraph(
         signal,
         browserUser?.includes("@") ? browserUser : undefined,
         browserAuth,
       );
-      setProgress("Microsoft đang tra cứu nhật ký. Có thể mất vài phút…");
+      signal.throwIfAborted();
+      setProgress(
+        workloadOnly
+          ? "Đang kiểm tra nhật ký Power Automate. Có thể mất vài phút…"
+          : "Microsoft đang tra cứu nhật ký. Có thể mất vài phút…",
+      );
       const report = await new GraphAudit(token).search(
         days,
         signal,
@@ -95,6 +106,7 @@ export function FlowAuditSearch({
       );
       signal.throwIfAborted();
       onReport(report);
+      if (!report.events.length) return;
       setProgress("Đang đối chiếu tên flow từ audit Dataverse nếu có…");
       const complete = await fillTitles(
         report,
@@ -106,6 +118,8 @@ export function FlowAuditSearch({
     } catch (e) {
       if (!signal.aborted) {
         setError(flowAuditAuthError(e));
+      } else if (active.current === controller) {
+        setCancelled(true);
       }
     } finally {
       if (active.current === controller) {
@@ -116,6 +130,7 @@ export function FlowAuditSearch({
     }
   };
   if (!browserUser) return null;
+  const graph = report?.graph?.days === days ? report.graph : undefined;
   return (
     <section
       className="filter-card"
@@ -132,7 +147,11 @@ export function FlowAuditSearch({
           <select
             value={days}
             disabled={busy}
-            onChange={(e) => setDays(Number(e.target.value))}
+            onChange={(e) => {
+              setDays(Number(e.target.value));
+              setError("");
+              setCancelled(false);
+            }}
           >
             {[7, 21, 30, 90].map((n) => (
               <option key={n} value={n}>
@@ -149,16 +168,14 @@ export function FlowAuditSearch({
         >
           Tải lịch sử xóa
         </button>
-        {emptyGraph && emptyGraph.days === days && !emptyGraph.workloadOnly && (
-          <button
-            type="button"
-            className="button"
-            disabled={busy}
-            onClick={() => void search(true)}
-          >
-            Kiểm tra nguồn nhật ký
-          </button>
-        )}
+        <button
+          type="button"
+          className="button"
+          disabled={busy}
+          onClick={() => void search(true)}
+        >
+          Kiểm tra nguồn nhật ký
+        </button>
         {progress && (
           <button
             type="button"
@@ -175,6 +192,27 @@ export function FlowAuditSearch({
         </p>
       )}
       {error && <Message>{error}</Message>}
+      {!progress && !error && cancelled && (
+        <Message kind="info">Đã dừng chờ.</Message>
+      )}
+      {!progress && !error && !cancelled && graph && report && (
+        <Message kind={report.events.length ? "success" : "info"}>
+          <strong>
+            {graph.workloadOnly
+              ? "Đã kiểm tra nguồn nhật ký."
+              : "Đã tải lịch sử xóa."}
+          </strong>{" "}
+          Microsoft Graph trả về {graph.received} bản ghi trong {graph.days}{" "}
+          ngày; tìm thấy {report.events.length} sự kiện xóa.
+          {report.events.length > 0
+            ? " Xem chi tiết ở bảng bên dưới."
+            : graph.workloadOnly
+              ? graph.received === 0
+                ? " Graph chưa trả nhật ký Power Automate trong khoảng ngày và phạm vi quyền của tài khoản này."
+                : " Có nhật ký Power Automate, nhưng chưa nhận diện được sự kiện xóa thành công."
+              : " Bấm Kiểm tra nguồn nhật ký để kiểm tra rộng hơn."}
+        </Message>
+      )}
       <details className="flow-help">
         <summary>Quyền cần để tra cứu</summary>
         <p>
