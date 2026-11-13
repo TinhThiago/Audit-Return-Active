@@ -12,6 +12,7 @@ import {
   ChevronRight,
   ShieldCheck,
   Workflow,
+  Clock3,
 } from "lucide-react";
 import { useServices } from "./providers";
 import { useLatestRequest } from "./useLatestRequest";
@@ -22,14 +23,21 @@ import { AuditPage } from "../features/audit/AuditPage";
 import { ActivationPage } from "../features/activation/ActivationPage";
 import { Message, Spinner } from "../ui/components";
 import { DeletedFlowsPage } from "../features/flows/DeletedFlowsPage";
+import { UserTimeZonePage } from "../features/users/UserTimeZonePage";
 type Page =
-  "createUpdate" | "delete" | "active" | "deactivate" | "deletedFlows";
+  | "createUpdate"
+  | "delete"
+  | "active"
+  | "deactivate"
+  | "deletedFlows"
+  | "userTimeZones";
 const pages = [
   { id: "createUpdate" as const, label: "Create / Update", Icon: History },
   { id: "delete" as const, label: "Audit Delete", Icon: Trash2 },
   { id: "active" as const, label: "Return Active / Delete", Icon: Power },
   { id: "deactivate" as const, label: "Deactivate", Icon: Power },
   { id: "deletedFlows" as const, label: "Cloud Flow đã xóa", Icon: Workflow },
+  { id: "userTimeZones" as const, label: "Thiết lập múi giờ", Icon: Clock3 },
 ];
 export function App({
   browserUser,
@@ -41,6 +49,7 @@ export function App({
   sessionControls?: ReactNode;
 }) {
   const [page, setPage] = useState<Page>("createUpdate");
+  const usesTable = page !== "deletedFlows" && page !== "userTimeZones";
   const [collapsed, setCollapsed] = useState(false);
   const [tableName, setTableName] = useState("");
   const [user, setUser] = useState("");
@@ -156,7 +165,7 @@ export function App({
               </button>
             ))}
           </nav>
-          {!collapsed && page !== "deletedFlows" && (
+          {!collapsed && usesTable && (
             <div className="sidebar-table">
               <div className="sidebar-caption">
                 <Database size={15} />
@@ -194,7 +203,7 @@ export function App({
             <ChevronRight size={12} />{" "}
             <span>{pages.find((p) => p.id === page)?.label}</span>
           </div>
-          {collapsed && page !== "deletedFlows" && (
+          {collapsed && usesTable && (
             <div className="inline-table-picker">
               <TablePicker
                 tables={catalog.data || []}
@@ -219,7 +228,7 @@ export function App({
           {page !== "deletedFlows" && contextError && (
             <Message kind="info">{contextError}</Message>
           )}
-          {page !== "deletedFlows" && catalog.error && (
+          {usesTable && catalog.error && (
             <Message>
               {catalog.error}
               <button
@@ -237,6 +246,8 @@ export function App({
               browserUser={browserUser}
               browserAuth={browserAuth}
             />
+          ) : page === "userTimeZones" ? (
+            <UserTimeZonePage ready={!!user && !contextError} />
           ) : page === "active" || page === "deactivate" ? (
             <ActivationPage key={page + tableName} table={table} mode={page} />
           ) : (
@@ -250,9 +261,11 @@ export function App({
               />
               {page === "deletedFlows"
                 ? "Nhật ký Microsoft Purview"
-                : catalog.data
-                  ? "Đã tải metadata"
-                  : "Chưa tải metadata"}
+                : page === "userTimeZones"
+                  ? "Thiết lập người dùng Dataverse"
+                  : catalog.data
+                    ? "Đã tải metadata"
+                    : "Chưa tải metadata"}
             </span>
           </footer>
         </main>

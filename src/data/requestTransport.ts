@@ -64,17 +64,33 @@ export class ScopedTransport implements DataverseTransport {
   constructor(private readonly call: Invoke) {}
   async request<T>(r: DataverseRequest): Promise<T> {
     const path = safePath(r.path);
-    if (
-      r.method === "PATCH" &&
-      (!/^[a-z][a-z0-9_]*\([0-9a-f-]{36}\)$/i.test(path) ||
-        !r.body ||
-        Object.keys(r.body).sort().join(",") !== "statecode,statuscode" ||
-        !Object.values(r.body).every(Number.isInteger) ||
-        !r.etag)
-    )
-      throw new Error(
-        "Chỉ hỗ trợ cập nhật statecode/statuscode của bản ghi đã đọc và có phiên bản.",
-      );
+    if (r.method === "PATCH") {
+      const settings = /^usersettingscollection\(/i.test(path);
+      const keys = Object.keys(r.body ?? {})
+        .sort()
+        .join(",");
+      const valid = settings
+        ? /^usersettingscollection\([0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\)$/i.test(
+            path,
+          ) &&
+          r.etag === "*" &&
+          keys === "timezonecode" &&
+          typeof r.body?.timezonecode === "number" &&
+          Number.isInteger(r.body.timezonecode) &&
+          r.body.timezonecode >= 0 &&
+          r.body.timezonecode <= 2147483647
+        : /^[a-z][a-z0-9_]*\([0-9a-f-]{36}\)$/i.test(path) &&
+          !!r.etag &&
+          !!r.body &&
+          keys === "statecode,statuscode" &&
+          Object.values(r.body).every(Number.isInteger);
+      if (!valid)
+        throw new Error(
+          settings
+            ? "Chỉ hỗ trợ cập nhật múi giờ của thiết lập người dùng đã có."
+            : "Chỉ hỗ trợ cập nhật statecode/statuscode của bản ghi đã đọc và có phiên bản.",
+        );
+    }
     if (
       r.method === "DELETE" &&
       (!/^[a-z][a-z0-9_]*\([0-9a-f-]{36}\)$/i.test(path) ||

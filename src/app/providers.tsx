@@ -3,10 +3,12 @@ import type { DataverseTransport } from "../data/transport";
 import { MetadataService } from "../data/metadataService";
 import { AuditService } from "../data/auditService";
 import { RecordService } from "../data/recordService";
+import { UserTimeZoneService } from "../data/userTimeZoneService";
 const Context = createContext<{
   metadata: MetadataService;
   audit: AuditService;
   records: RecordService;
+  userTimeZones: UserTimeZoneService;
 } | null>(null);
 export function ServicesProvider({
   children,
@@ -20,6 +22,7 @@ export function ServicesProvider({
       metadata: new MetadataService(transport),
       audit: new AuditService(transport),
       records: new RecordService(transport),
+      userTimeZones: new UserTimeZoneService(transport),
     };
   }, [transport]);
   return <Context.Provider value={services}>{children}</Context.Provider>;

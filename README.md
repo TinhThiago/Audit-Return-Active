@@ -10,8 +10,9 @@
 - **Audit Delete:** chọn table để xem lịch sử các bản ghi đã xóa.
 - **Return Active / Delete:** đọc bản ghi trước khi kích hoạt hoặc xóa. Delete xác nhận tên/table/GUID và có thể tác động dữ liệu liên quan theo cấu hình cascade của Dataverse.
 - **Deactivate:** chuyển bản ghi Active sang Inactive theo metadata state/status.
+- **Thiết lập múi giờ:** tìm tài khoản Dataverse theo tên hoặc email, xem múi giờ đã lưu, chọn múi giờ từ danh mục Dataverse và cập nhật từng người dùng.
 
-Chỉ liệt kê table custom unmanaged. Combobox tìm theo label/logical name, hỗ trợ tiếng Việt không dấu. Ngày giờ dd/MM/yyyy HH:mm:ss, UTC+7.
+Bộ chọn bảng Audit & Records chỉ liệt kê table custom unmanaged. Combobox tìm theo label/logical name, hỗ trợ tiếng Việt không dấu. Lịch sử audit hiển thị ngày giờ dd/MM/yyyy HH:mm:ss, UTC+7.
 
 ## GitHub Pages
 
@@ -38,11 +39,13 @@ npm.cmd run build:pages
 
 Active/Deactivate lấy state/status từ metadata, dùng ETag If-Match và đọc lại để xác minh. App khóa thao tác trùng, không tự retry lệnh ghi. Sau lỗi hoặc kết quả chưa xác minh, tải lại bản ghi trước khi thử tiếp. Không hỗ trợ vòng đời đặc thù của activity hoặc bảng không có Active/Inactive tổng quát.
 
+Trang Thiết lập múi giờ chỉ gửi `timezonecode` cho bản ghi `UserSettings` hiện có của người dùng được chọn. Cần quyền đọc người dùng, thiết lập và danh mục múi giờ, cùng quyền ghi thiết lập của người dùng đích trong Dataverse. Thay đổi này không chỉnh múi giờ Microsoft 365 hoặc múi giờ hiển thị của các trang audit.
+
 Token do MSAL quản lý trong session. Không lưu payload audit/bản ghi vào localStorage/IndexedDB. Khi popup tài khoản đang xử lý, workspace và transport đều khóa request mới. Đăng xuất/cấp quyền lại dựng lại workspace để xóa lựa chọn và snapshot cũ.
 
 ## Kiểm chứng
 
-52 tests kiểm tra domain, service, transport và UI bằng dữ liệu giả lập. Build TypeScript, Power Apps và Pages được kiểm tra riêng. Không chạy Active, Deactivate hoặc Delete thật trên Production để nghiệm thu Pages. Callback Entra và quyền người dùng cần kiểm tra sau khi quản trị cấu hình.
+Các bài kiểm thử dùng dữ liệu giả lập để kiểm tra domain, service, transport và UI. Build TypeScript, Power Apps và Pages được kiểm tra riêng. Không thay đổi bản ghi hoặc thiết lập người dùng thật trên Production để nghiệm thu Pages. Callback Entra và quyền người dùng cần kiểm tra sau khi quản trị cấu hình.
 
 Xem [kết quả kiểm tra](docs/verification-results.md). Các ghi chú source-only ngày 07–10/10 là lịch sử trước yêu cầu GitHub Pages đã duyệt ngày 16/10/2026.
 

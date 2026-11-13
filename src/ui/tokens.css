@@ -606,6 +606,46 @@ main {
 .data-table .selected td {
   background: #f7f3ed;
 }
+.timezone-filter {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.timezone-filter > label {
+  display: grid;
+  gap: 6px;
+  width: min(100%, 350px);
+}
+.timezone-table {
+  min-width: 740px;
+}
+.timezone-table td:first-child {
+  white-space: normal;
+}
+.timezone-table td:last-child {
+  min-width: 150px;
+}
+.timezone-table select {
+  min-width: 240px;
+  max-width: 380px;
+}
+.timezone-account,
+.timezone-feedback {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.timezone-account {
+  overflow-wrap: anywhere;
+  color: #66717a;
+}
+.timezone-feedback.success {
+  color: #21713b;
+}
+.timezone-feedback.error {
+  color: #a32e2e;
+}
 .tag {
   display: inline-flex;
   align-items: center;
