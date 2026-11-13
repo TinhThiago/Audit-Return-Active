@@ -21,15 +21,26 @@ function wait(ms: number, signal: AbortSignal) {
 }
 
 export type GraphAuditQuery = {
-  id: string;
   days: number;
   workloadOnly: boolean;
-};
+} & ({ id: string } | { displayName: string });
+
+const queryNamePrefix = "PH Audit · Deleted cloud flows · ";
+
+class GraphAuditHttpError extends Error {
+  constructor(readonly status: number) {
+    super(`Không tải được nhật ký Microsoft Graph (HTTP ${status}).`);
+  }
+}
+
+const retryableRead = (status: number) => [429, 502, 503, 504].includes(status);
 
 export class GraphAuditWaitError extends Error {
   constructor(readonly query: GraphAuditQuery) {
     super(
-      "Chưa nhận được kết quả từ Microsoft trong 5 phút. Bấm Tiếp tục chờ để kiểm tra lại truy vấn này.",
+      "displayName" in query
+        ? "Microsoft Graph hết thời gian phản hồi (HTTP 504), chưa xác nhận được truy vấn đã tạo. Bấm Tiếp tục chờ để tìm lại yêu cầu đã gửi."
+        : "Chưa lấy được kết quả từ Microsoft. Bấm Tiếp tục chờ để kiểm tra lại truy vấn này.",
     );
     this.name = "GraphAuditWaitError";
   }
@@ -52,7 +63,7 @@ export class GraphAudit {
   }
 
   async resume(query: GraphAuditQuery, signal: AbortSignal) {
-    if (!queryIdPattern.test(query.id))
+    if ("id" in query && !queryIdPattern.test(query.id))
       throw new Error("Mã truy vấn Microsoft Graph không hợp lệ.");
     return this.run(query.days, signal, Date.now(), query.workloadOnly, query);
   }
@@ -88,7 +99,7 @@ export class GraphAudit {
         });
         if (response.ok)
           return (await response.json()) as Record<string, unknown>;
-        if (!body && [429, 503, 504].includes(response.status) && attempt < 3) {
+        if (!body && retryableRead(response.status) && attempt < 3) {
           const retry = response.headers.get("Retry-After");
           const seconds = Number(retry);
           const delay =
@@ -106,35 +117,88 @@ export class GraphAudit {
           throw new Error(
             "Microsoft Graph từ chối truy cập. Kiểm tra admin consent và vai trò đọc Audit của tài khoản.",
           );
-        throw new Error(
-          `Không tải được nhật ký Microsoft Graph (HTTP ${response.status}).`,
-        );
+        throw new GraphAuditHttpError(response.status);
       }
     };
     const unpack = (body: Record<string, unknown>) =>
       body.value && typeof body.value === "object" && !Array.isArray(body.value)
         ? (body.value as Record<string, unknown>)
         : body;
+    const findSubmittedQuery = async (displayName: string) => {
+      for (let round = 0; round < 3; round++) {
+        if (round) await this.pause(2000 * 2 ** (round - 1), deadline);
+        let next = new URL(queries, origin);
+        const visited = new Set<string>();
+        for (let page = 0; page < 5; page++) {
+          if (
+            next.origin !== origin ||
+            next.pathname !== queries ||
+            next.username ||
+            next.password ||
+            next.hash ||
+            visited.has(next.href)
+          )
+            break;
+          visited.add(next.href);
+          const result = await request(next);
+          if (!Array.isArray(result.value)) break;
+          const match = result.value.find(
+            (item) =>
+              item?.displayName === displayName &&
+              typeof item.id === "string" &&
+              queryIdPattern.test(item.id),
+          );
+          if (match)
+            return {
+              id: match.id as string,
+              status: match.status ?? "notStarted",
+            };
+          const continuation = result["@odata.nextLink"];
+          if (typeof continuation !== "string" || !continuation) break;
+          try {
+            next = new URL(continuation, origin);
+          } catch {
+            break;
+          }
+        }
+      }
+    };
     try {
       let status: unknown;
-      if (query) {
+      if (query && "id" in query) {
         status = unpack(
           await request(new URL(queries + "/" + query.id, origin)),
         ).status;
-      } else {
-        const created = unpack(
-          await request(new URL(queries, origin), {
-            displayName: "PH Audit · Deleted cloud flows",
-            filterStartDateTime: new Date(now - days * day).toISOString(),
-            filterEndDateTime: new Date(now).toISOString(),
-            recordTypeFilters: ["microsoftFlow"],
-            ...(!workloadOnly ? { operationFilters: ["DeleteFlow"] } : {}),
-          }),
-        );
-        if (typeof created.id !== "string" || !queryIdPattern.test(created.id))
-          throw new Error("Microsoft Graph không trả ID tra cứu hợp lệ.");
-        query = { id: created.id, days, workloadOnly };
-        status = created.status ?? "notStarted";
+      } else if (!query) {
+        const displayName = queryNamePrefix + globalThis.crypto.randomUUID();
+        try {
+          const created = unpack(
+            await request(new URL(queries, origin), {
+              displayName,
+              filterStartDateTime: new Date(now - days * day).toISOString(),
+              filterEndDateTime: new Date(now).toISOString(),
+              recordTypeFilters: ["microsoftFlow"],
+              ...(!workloadOnly ? { operationFilters: ["DeleteFlow"] } : {}),
+            }),
+          );
+          if (
+            typeof created.id !== "string" ||
+            !queryIdPattern.test(created.id)
+          )
+            throw new Error("Microsoft Graph không trả ID tra cứu hợp lệ.");
+          query = { id: created.id, days, workloadOnly };
+          status = created.status ?? "notStarted";
+        } catch (error) {
+          if (!(error instanceof GraphAuditHttpError) || error.status !== 504)
+            throw error;
+          query = { displayName, days, workloadOnly };
+        }
+      }
+      if ("displayName" in query) {
+        const found = await findSubmittedQuery(query.displayName);
+        if (!found) throw new GraphAuditWaitError(query);
+        query = { id: found.id, days, workloadOnly };
+        status = found.status;
       }
       const path = queries + "/" + query.id;
       while (status === "running" || status === "notStarted") {
@@ -184,7 +248,12 @@ export class GraphAudit {
         graph: { received: records.length, days, workloadOnly },
       };
     } catch (error) {
-      if (query && timeout.aborted && !signal.aborted)
+      if (
+        query &&
+        !signal.aborted &&
+        (timeout.aborted ||
+          (error instanceof GraphAuditHttpError && retryableRead(error.status)))
+      )
         throw new GraphAuditWaitError(query);
       throw error;
     }

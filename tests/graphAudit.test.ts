@@ -201,3 +201,60 @@ it("resumes a timed-out Graph query without creating a second query", async () =
     records.replace(/\/records$/, ""),
   );
 });
+
+it("recovers a query that Graph accepted despite returning 504", async () => {
+  let displayName: string;
+  const fetch = vi
+    .fn<typeof globalThis.fetch>()
+    .mockImplementationOnce(async (_url, options) => {
+      displayName = JSON.parse(String(options?.body)).displayName;
+      return result({}, 504);
+    })
+    .mockImplementationOnce(async () =>
+      result({
+        value: [
+          {
+            id: "another-query",
+            displayName: "PH Audit · Deleted cloud flows",
+          },
+          { id: "query-id", displayName, status: "running" },
+        ],
+      }),
+    )
+    .mockResolvedValueOnce(result({ status: "succeeded" }))
+    .mockResolvedValueOnce(result({ value: [record] }));
+  const report = await new GraphAudit(async () => "token", fetch, pause).search(
+    1,
+    new AbortController().signal,
+  );
+  expect(report.events.map((event) => event.key)).toEqual(["event"]);
+  expect(
+    fetch.mock.calls.map(([url, init]) => [String(url), init?.method]),
+  ).toEqual([
+    [records.replace(/\/query-id\/records$/, ""), "POST"],
+    [records.replace(/\/query-id\/records$/, ""), "GET"],
+    [records.replace(/\/records$/, ""), "GET"],
+    [records, "GET"],
+  ]);
+});
+
+it("offers another lookup of an unconfirmed 504 without resubmitting", async () => {
+  const fetch = vi.fn<typeof globalThis.fetch>(async (_url, options) => {
+    if (options?.method === "POST") return result({}, 504);
+    return result({ value: [] });
+  });
+  const audit = new GraphAudit(async () => "token", fetch, pause);
+  const signal = new AbortController().signal;
+  const error = await audit.search(1, signal).catch((error: unknown) => error);
+  expect(error).toMatchObject({
+    name: "GraphAuditWaitError",
+    message: expect.stringMatching(/504.*chưa xác nhận/i),
+    query: { displayName: expect.any(String), days: 1, workloadOnly: false },
+  });
+  const { query } =
+    error as import("../src/features/flows/graphAudit").GraphAuditWaitError;
+  await expect(audit.resume(query, signal)).rejects.toMatchObject({ query });
+  expect(
+    fetch.mock.calls.filter(([, init]) => init?.method === "POST"),
+  ).toHaveLength(1);
+});

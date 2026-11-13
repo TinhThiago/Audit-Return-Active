@@ -116,3 +116,27 @@ it("offers to continue waiting on the same query after a timeout", async () => {
   expect(resume).toHaveBeenCalledWith(query, expect.any(AbortSignal));
   expect(screen.queryByRole("button", { name: "Tiếp tục chờ" })).toBeNull();
 });
+
+it("distinguishes an unconfirmed submission from zero results and lets users start a fresh query", async () => {
+  connect.mockResolvedValue(async () => "token");
+  search.mockRejectedValueOnce(
+    new GraphAuditWaitError({
+      displayName: "unique-query-name",
+      days: 21,
+      workloadOnly: false,
+    }),
+  );
+  search.mockResolvedValueOnce({
+    events: [],
+    unreadable: 0,
+    graph: { received: 0, days: 21, workloadOnly: false },
+  });
+  render(<Harness />);
+  fireEvent.click(screen.getByRole("button", { name: "Tải lịch sử xóa" }));
+  expect((await screen.findByRole("alert")).textContent).toContain("HTTP 504");
+  expect(screen.queryByText(/Microsoft Graph trả về 0 bản ghi/)).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Gửi truy vấn mới" }));
+  await screen.findByText(/Microsoft Graph trả về 0 bản ghi/);
+  expect(search).toHaveBeenCalledTimes(2);
+  expect(resume).not.toHaveBeenCalled();
+});

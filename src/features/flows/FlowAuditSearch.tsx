@@ -78,10 +78,12 @@ export function FlowAuditSearch({
   const [cancelled, setCancelled] = useState(false);
   const active = useRef<AbortController | null>(null);
   useEffect(() => () => active.current?.abort(), []);
-  const search = async (workloadOnly = false) => {
+  const search = async (workloadOnly = false, startNew = false) => {
     if (active.current || busy) return;
     const resume =
-      pendingQuery?.days === days && pendingQuery.workloadOnly === workloadOnly
+      !startNew &&
+      pendingQuery?.days === days &&
+      pendingQuery.workloadOnly === workloadOnly
         ? pendingQuery
         : undefined;
     setPendingQuery(resume);
@@ -198,6 +200,18 @@ export function FlowAuditSearch({
             Tiếp tục chờ
           </button>
         )}
+        {pendingQuery?.days === days &&
+          "displayName" in pendingQuery &&
+          !progress && (
+            <button
+              type="button"
+              className="button"
+              disabled={busy}
+              onClick={() => void search(pendingQuery.workloadOnly, true)}
+            >
+              Gửi truy vấn mới
+            </button>
+          )}
         {progress && (
           <button
             type="button"
